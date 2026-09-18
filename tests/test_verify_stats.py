@@ -52,3 +52,13 @@ def test_verify_disabled_by_config():
         out = verify_stats(FIX / "sample_layout.pdf", stats, cfg)
     reread.assert_not_called()
     assert out[0].verified is None
+
+
+def test_verify_degenerate_bbox_is_unverifiable_not_crash():
+    # Regression: a zero-area bbox from the extractor must NOT crash the ingest; the stat
+    # stays unverifiable (verified=None). Uses the real render path (no mock) to reproduce.
+    cfg = Config(verify_stats=True)
+    stats = [Stat(value_text="42%", label="on-time", page=2, bbox=(72, 100, 72, 100))]
+    out = verify_stats(FIX / "sample_layout.pdf", stats, cfg)
+    assert out[0].verified is None
+    assert out[0].reread_value is None

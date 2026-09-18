@@ -9,7 +9,7 @@ the extraction pass reported. This catches:
 Verification outcomes:
   verified = True   -> re-read agrees
   verified = False  -> re-read disagrees (flagged loudly downstream)
-  verified = None   -> unverifiable (no bbox to crop, or verification disabled)
+  verified = None   -> unverifiable (no bbox to crop, region unrenderable, or disabled)
 
 We never mark a stat verified without actually re-reading it.
 """
@@ -21,7 +21,7 @@ from pathlib import Path
 
 from docstore.config import Config
 from docstore.models import Stat
-from docstore.render import render_region
+from docstore.render import RegionError, render_region
 from docstore.vision_extract import extract_from_image
 
 _REREAD_INSTRUCTION = (
@@ -59,7 +59,12 @@ def verify_stats(path: str | Path, stats: list[Stat], cfg: Config) -> list[Stat]
     for stat in stats:
         if not stat.bbox:
             continue  # unverifiable -> stays verified=None
-        reread = _reread_number(path, stat.page, stat.bbox, cfg)
+        try:
+            reread = _reread_number(path, stat.page, stat.bbox, cfg)
+        except RegionError:
+            # Degenerate / off-page bbox from the extractor: can't crop it to re-read,
+            # so it stays unverifiable (verified=None) rather than crashing the ingest.
+            continue
         stat.reread_value = reread
         stat.verified = normalize_number(reread) == normalize_number(stat.value_text)
     return stats

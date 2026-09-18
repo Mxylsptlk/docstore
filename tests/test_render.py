@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from docstore.render import render_page, render_region
+from docstore.render import RegionError, render_page, render_region
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -37,3 +37,35 @@ def test_render_dpi_scales_resolution():
     lw, _ = _png_size(low)
     hw, _ = _png_size(high)
     assert hw > lw
+
+
+def test_render_region_degenerate_bbox_raises():
+    # Zero-area / zero-width boxes must raise RegionError, not crash PyMuPDF's PNG encoder
+    # (regression: vision models sometimes emit a point bbox, which crashed ingest).
+    import pytest
+
+    for bad in [(72, 100, 72, 100), (72, 100, 72, 160), (72, 100, 200, 100)]:
+        with pytest.raises(RegionError):
+            render_region(FIX / "sample_layout.pdf", page=2, bbox=bad, dpi=150)
+
+
+def test_render_region_offpage_bbox_raises():
+    # A box entirely off the page (e.g. image-pixel coords mistaken for points).
+    import pytest
+
+    with pytest.raises(RegionError):
+        render_region(FIX / "sample_layout.pdf", page=2, bbox=(5000, 5000, 5100, 5100), dpi=150)
+
+
+def test_render_region_reversed_corners_ok():
+    # Swapped corners should still render the region, not fail.
+    data = render_region(FIX / "sample_layout.pdf", page=2, bbox=(200, 160, 72, 100), dpi=150)
+    w, h = _png_size(data)
+    assert w > 0 and h > 0
+
+
+def test_render_region_partial_offpage_clips():
+    # A box straddling the page edge renders only the on-page part.
+    data = render_region(FIX / "sample_layout.pdf", page=2, bbox=(500, 700, 900, 1100), dpi=150)
+    w, h = _png_size(data)
+    assert w > 0 and h > 0
