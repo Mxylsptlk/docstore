@@ -15,8 +15,10 @@ vision_model_ollama: qwen3-vl:2b
 # explicit id, e.g. claude-sonnet-5 or a dated snapshot. Use "latest:opus"/"latest:haiku".
 vision_model_claude: latest
 
-# Page render resolution for vision extraction / stat verification
+# Page render resolution. Claude uses render_dpi; the local Ollama vision path uses the
+# lower render_dpi_ollama (smaller image -> far fewer tokens -> much faster on CPU).
 render_dpi: 220
+render_dpi_ollama: 150
 
 # Chunking
 chunk_size: 1200
@@ -29,7 +31,10 @@ answer_path: ANSWER.md
 graph_dir: graph
 
 # Behavior
-verify_stats: true      # re-read each extracted statistic from its cropped region
+# verify_stats: re-read each extracted statistic from its cropped region to confirm it.
+# Leave unset (auto) to verify on the claude backend but skip it on ollama (a second slow
+# local call that rarely confirms). Set true/false to force it either way.
+# verify_stats: true
 force_vision: false     # true = send every page through vision (skip the gate)
 
 # Knowledge graph

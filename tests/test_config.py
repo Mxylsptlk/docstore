@@ -68,7 +68,7 @@ def test_config_defaults_without_yaml():
     cfg = Config()
     assert cfg.extraction_backend == "ollama"
     assert cfg.vision_model_ollama == "qwen3-vl:2b"
-    assert cfg.verify_stats is True
+    assert cfg.verify_stats is None  # AUTO (resolved per-backend by should_verify_stats)
     assert cfg.force_vision is False
 
 
@@ -81,6 +81,24 @@ def test_vision_model_for_selects_by_backend():
     assert cfg.vision_model_for("ollama") == "qwen3-vl:2b"
     cfg_claude = Config(extraction_backend="claude")
     assert cfg_claude.vision_model_for() == "latest"
+
+
+def test_render_dpi_for_by_backend():
+    cfg = Config(render_dpi=220, render_dpi_ollama=150)
+    assert cfg.render_dpi_for("ollama") == 150
+    assert cfg.render_dpi_for("claude") == 220
+    assert cfg.render_dpi_for() == 150  # default backend is ollama
+
+
+def test_should_verify_stats_auto_by_backend():
+    # AUTO (None): off for ollama, on for claude.
+    assert Config(extraction_backend="ollama").should_verify_stats() is False
+    assert Config(extraction_backend="claude").should_verify_stats() is True
+    # Explicit values always win, regardless of backend.
+    assert Config(extraction_backend="ollama", verify_stats=True).should_verify_stats() is True
+    assert Config(extraction_backend="claude", verify_stats=False).should_verify_stats() is False
+    # Explicit backend arg overrides the configured one.
+    assert Config(extraction_backend="claude").should_verify_stats("ollama") is False
 
 
 def test_extraction_backend_validated():

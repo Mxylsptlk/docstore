@@ -18,7 +18,7 @@ def test_normalize_number():
 
 
 def test_verify_confirms_match():
-    cfg = Config()
+    cfg = Config(verify_stats=True)
     stats = [Stat(value_text="42%", label="on-time", page=2, bbox=(72, 100, 200, 160))]
     # region re-read returns the same number
     with patch("docstore.verify_stats._reread_number", return_value="42%"):
@@ -28,7 +28,7 @@ def test_verify_confirms_match():
 
 
 def test_verify_flags_mismatch():
-    cfg = Config()
+    cfg = Config(verify_stats=True)
     stats = [Stat(value_text="42%", label="on-time", page=2, bbox=(72, 100, 200, 160))]
     with patch("docstore.verify_stats._reread_number", return_value="24%"):
         out = verify_stats(FIX / "sample_layout.pdf", stats, cfg)
@@ -37,11 +37,21 @@ def test_verify_flags_mismatch():
 
 
 def test_verify_unverifiable_without_bbox():
-    cfg = Config()
+    cfg = Config(verify_stats=True)
     stats = [Stat(value_text="17", label="crews", page=1, bbox=None)]
     with patch("docstore.verify_stats._reread_number") as reread:
         out = verify_stats(FIX / "sample_layout.pdf", stats, cfg)
     reread.assert_not_called()  # nothing to crop
+    assert out[0].verified is None
+
+
+def test_verify_auto_off_for_ollama_backend():
+    # AUTO (verify_stats unset) + ollama backend -> no re-read, stat stays unverifiable.
+    cfg = Config(extraction_backend="ollama")  # verify_stats defaults to None (auto)
+    stats = [Stat(value_text="42%", label="on-time", page=2, bbox=(72, 100, 200, 160))]
+    with patch("docstore.verify_stats._reread_number") as reread:
+        out = verify_stats(FIX / "sample_layout.pdf", stats, cfg)
+    reread.assert_not_called()
     assert out[0].verified is None
 
 

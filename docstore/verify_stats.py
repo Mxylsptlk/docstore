@@ -42,7 +42,7 @@ def normalize_number(s: str) -> str:
 
 def _reread_number(path: str | Path, page: int, bbox, cfg: Config) -> str:
     """Crop the stat's region and ask the vision model to read just that number."""
-    png = render_region(path, page, bbox, dpi=cfg.render_dpi)
+    png = render_region(path, page, bbox, dpi=cfg.render_dpi_for())
     text, _stats = extract_from_image(
         png,
         _REREAD_INSTRUCTION,
@@ -53,8 +53,8 @@ def _reread_number(path: str | Path, page: int, bbox, cfg: Config) -> str:
 
 
 def verify_stats(path: str | Path, stats: list[Stat], cfg: Config) -> list[Stat]:
-    if not cfg.verify_stats:
-        return stats  # verification off: leave verified=None (honest, not falsely trusted)
+    if not cfg.should_verify_stats():
+        return stats  # verification off (or AUTO-off for ollama): leave verified=None
 
     for stat in stats:
         if not stat.bbox:

@@ -91,7 +91,7 @@ def ingest(
 
         if needs_vision(page, force_vision=cfg.force_vision):
             pages_vision += 1
-            png = render_page(path, page.page, dpi=cfg.render_dpi)
+            png = render_page(path, page.page, dpi=cfg.render_dpi_for())
             curated, stats = extract_from_image(
                 png, instruction, backend=cfg.extraction_backend, model=cfg.vision_model_for()
             )

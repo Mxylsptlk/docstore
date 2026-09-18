@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -32,8 +32,11 @@ class Config(BaseModel):
     vision_model_ollama: str = "qwen3-vl:2b"
     vision_model_claude: str = "latest"  # sentinel -> newest Sonnet (see anthropic_models)
 
-    # Rendering
+    # Rendering. Claude uses render_dpi; the local Ollama vision path uses a lower DPI
+    # by default (smaller image -> far fewer tokens -> much faster on CPU, minor accuracy
+    # cost). Set render_dpi_ollama higher if small numbers read poorly.
     render_dpi: int = Field(default=220, ge=72)
+    render_dpi_ollama: int = Field(default=150, ge=72)
 
     # Chunking
     chunk_size: int = Field(default=1200, gt=0)
@@ -45,8 +48,10 @@ class Config(BaseModel):
     answer_path: str = "ANSWER.md"
     graph_dir: str = "graph"
 
-    # Behavior
-    verify_stats: bool = True
+    # Behavior. verify_stats=None means AUTO: verify on the claude backend (fast, accurate
+    # re-read) but skip on ollama (a second slow local vision call per stat that the small
+    # model rarely confirms). Set true/false to force it either way.
+    verify_stats: Optional[bool] = None
     force_vision: bool = False
 
     # Knowledge graph
@@ -64,6 +69,21 @@ class Config(BaseModel):
         if backend == "claude":
             return self.vision_model_claude
         raise ValueError(f"Unknown extraction backend: {backend!r} (use 'claude' or 'ollama')")
+
+    def render_dpi_for(self, backend: str | None = None) -> int:
+        """DPI to render pages at for the given backend. Ollama uses the lower
+        render_dpi_ollama (fewer image tokens -> faster); claude uses render_dpi."""
+        backend = backend or self.extraction_backend
+        return self.render_dpi_ollama if backend == "ollama" else self.render_dpi
+
+    def should_verify_stats(self, backend: str | None = None) -> bool:
+        """Resolve the AUTO (None) verify_stats default: on for claude, off for ollama
+        (where the re-read is a second slow local call that rarely confirms). An explicit
+        true/false always wins."""
+        if self.verify_stats is not None:
+            return self.verify_stats
+        backend = backend or self.extraction_backend
+        return backend != "ollama"
 
     def anthropic_api_key(self) -> str:
         """Read the Anthropic key from the environment at call time.
