@@ -52,12 +52,19 @@ def _schema(dim: int) -> pa.Schema:
 
 
 def open_store(cfg: Config, *, dim: int, embed_model: Optional[str] = None):
-    """Open (creating if needed) the LanceDB table. Returns the table handle."""
+    """Open (creating if needed) the LanceDB table. Returns the table handle.
+
+    Robust to a fresh connection not yet seeing an existing table: try to open first,
+    and only create on a genuine miss.
+    """
     db = lancedb.connect(str(_db_path(cfg)))
-    if cfg.table_name in db.list_tables():
+    try:
         table = db.open_table(cfg.table_name)
-    else:
-        table = db.create_table(cfg.table_name, schema=_schema(dim))
+    except Exception:  # noqa: BLE001 — table doesn't exist yet
+        try:
+            table = db.create_table(cfg.table_name, schema=_schema(dim))
+        except Exception:  # noqa: BLE001 — lost a create race; open the winner
+            table = db.open_table(cfg.table_name)
     if embed_model is not None:
         _meta_path(cfg).write_text(json.dumps({"embed_model": embed_model, "dim": dim}))
     return table
