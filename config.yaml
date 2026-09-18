@@ -20,7 +20,14 @@ chunk_overlap: 150
 data_dir: data
 table_name: chunks
 answer_path: ANSWER.md
+graph_dir: graph
 
 # Behavior
 verify_stats: true      # re-read each extracted statistic from its cropped region
 force_vision: false     # true = send every page through vision (skip the gate)
+
+# Knowledge graph
+build_graph: true       # default: link every ingested doc into the Kùzu graph
+                        # (override per-ingest with ingest(..., graph=False) / --no-graph)
+entity_backend: regex   # regex (default, zero-dep) | ollama | claude
+entity_model: llama3.1  # instruct model used only when entity_backend: ollama

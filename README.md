@@ -142,12 +142,48 @@ pytest -m "not live"     # fast unit tests, no Ollama/key needed (mocks external
 pytest -m live           # end-to-end; requires Ollama + ANTHROPIC_API_KEY
 ```
 
+## Knowledge graph
+
+Alongside the vector store, docstore builds a local **Kùzu** knowledge graph. The vector
+store answers *"what text is similar to my question?"*; the graph answers *"what is
+connected?"* — the same entity across many PDFs, multi-hop links, explainable paths.
+
+Schema: `(Document)-[:HAS_CHUNK]->(Chunk)-[:MENTIONS]->(Entity)`, plus a
+`(Document)-[:REFERENCES {count}]->(Entity)` rollup. Entities unify on a normalized key,
+so "Acme Corp." and "acme corp" become **one node** — that unification is the whole point.
+
+Entity extraction is pluggable via `entity_backend`: **`regex`** (default, zero-dependency —
+MONEY / DATE / ORG), `ollama` (a local instruct model, richer), or `claude` (best, costs
+tokens). The richer backends fall back to regex on any failure, so ingest never breaks.
+
+**Turning the graph off per document** — pass `graph=False` to exclude a single document
+from the graph even when it's otherwise enabled:
+
+```python
+docstore.ingest("throwaway.pdf", cfg=cfg, graph=False)   # ingested for search, NOT graphed
+```
+```bash
+docstore ingest throwaway.pdf --no-graph
+```
+
+Globally, set `build_graph: false` in `config.yaml` (then `graph=True` re-enables per call).
+
+**Querying the graph:**
+
+```python
+docstore.documents_mentioning("Acme Corp")   # -> ['alpha-1a2b', 'beta-3c4d']  (cross-document)
+docstore.related_documents("alpha-1a2b")      # -> docs sharing >=1 entity
+docstore.entities_in_document("alpha-1a2b")   # -> entity keys this doc references
+docstore.chunks_mentioning("Acme Corp")       # -> chunk ids (join back to the vector store)
+```
+
+The graph joins to the vector store on `chunk_id`, so a future GraphRAG step can seed from
+semantic hits and walk the graph for connected context.
+
 ## Roadmap
 
-- **Graph layer (planned):** a local graph DB (e.g. Kùzu) over the same chunks —
-  entities (people, orgs, projects, amounts) as nodes and cross-document relationships as
-  edges — for multi-hop questions and GraphRAG retrieval. Chunk IDs are already stable so
-  the graph can attach without re-ingesting.
+- GraphRAG retrieval: seed from vector hits, expand along graph edges before answering.
+- Richer relationship edges (co-occurrence weights, `REFERENCES` between documents).
 - Dedicated table-parsing pass for dense numeric tables.
 
 ### Page routing

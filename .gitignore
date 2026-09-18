@@ -226,3 +226,9 @@ __marimo__/
 # docstore runtime artifacts
 data/
 ANSWER.md
+
+# personal scratch space (Spyder ingest workflows, sample docs)
+sandbox/
+
+# knowledge graph store
+graph/

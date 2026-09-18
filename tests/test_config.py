@@ -25,6 +25,10 @@ def sample_yaml(tmp_path: Path) -> Path:
             answer_path: ANSWER.md
             verify_stats: true
             force_vision: false
+            graph_dir: graph
+            build_graph: true
+            entity_backend: regex
+            entity_model: llama3.1
             """
         )
     )
@@ -40,6 +44,8 @@ def test_config_loads_defaults(sample_yaml: Path):
     assert cfg.data_dir  # set
     assert cfg.verify_stats is True
     assert cfg.force_vision is False
+    assert cfg.build_graph is True
+    assert cfg.entity_backend == "regex"
 
 
 def test_config_has_no_secret_fields():

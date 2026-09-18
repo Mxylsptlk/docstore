@@ -22,10 +22,12 @@ from typing import Optional
 from docstore.chunk import chunk_page
 from docstore.config import Config
 from docstore.embed import embed_texts
+from docstore.entities import extract_entities
 from docstore.extract import Page, extract_layout
 from docstore.gate import needs_vision, page_should_skip
-from docstore.models import Block, Chunk, Stat
+from docstore.models import Block, Chunk, Entity, EntityMention, Stat
 from docstore.render import render_page
+from docstore.stores import graph as graph_store
 from docstore.stores import vector
 from docstore.verify_stats import verify_stats
 from docstore.vision_extract import extract_from_image
@@ -59,10 +61,14 @@ def ingest(
     instruction: Optional[str] = None,
     backend: Optional[str] = None,
     cfg: Optional[Config] = None,
+    graph: Optional[bool] = None,
 ) -> dict:
     cfg = cfg or Config()
     if backend:
         cfg = cfg.model_copy(update={"extraction_backend": backend})
+    # Per-ingest graph override: graph=False excludes THIS document from the knowledge
+    # graph even when cfg.build_graph is True. None -> fall back to the config default.
+    build_graph = cfg.build_graph if graph is None else graph
     path = Path(path)
     instruction = instruction or "Extract all key information and every statistic with its label."
 
@@ -117,6 +123,30 @@ def ingest(
         table = vector.open_store(cfg, dim=len(vectors[0]), embed_model=cfg.embed_model)
         vector.upsert_chunks(table, all_chunks, vectors)
 
+    # Knowledge graph (optional, per-ingest gated). Extract entities from each chunk and
+    # link them into the graph so this document unifies with others by shared entities.
+    entity_count = 0
+    graph_built = False
+    if build_graph and all_chunks:
+        all_entities: dict[str, Entity] = {}
+        mentions: list[EntityMention] = []
+        for ch in all_chunks:
+            for e in extract_entities(ch, backend=cfg.entity_backend, cfg=cfg):
+                all_entities.setdefault(e.key, e)
+                mentions.append(
+                    EntityMention(
+                        chunk_id=ch.chunk_id, doc_id=doc_id, entity_key=e.key,
+                        entity_name=e.name, etype=e.etype, page=ch.page,
+                    )
+                )
+        g = graph_store.open_graph(cfg)
+        graph_store.add_document(
+            g, doc_id=doc_id, source_path=str(path),
+            chunks=all_chunks, entities=list(all_entities.values()), mentions=mentions,
+        )
+        entity_count = len(all_entities)
+        graph_built = True
+
     unverified = sum(1 for s in all_stats if s.verified is not True)
 
     return {
@@ -129,4 +159,6 @@ def ingest(
         "chunk_count": len(all_chunks),
         "stat_count": len(all_stats),
         "unverified_count": unverified,
+        "graph_built": graph_built,
+        "entity_count": entity_count,
     }

@@ -51,7 +51,9 @@ def test_ingest_pipeline_mocked(tmp_path: Path):
          patch("docstore.ingest.chunk_page", return_value=[chunk]) as m_chunk, \
          patch("docstore.ingest.embed_texts", return_value=[[0.1, 0.2, 0.3]]) as m_embed, \
          patch("docstore.ingest.vector.open_store", return_value="TABLE") as m_open, \
-         patch("docstore.ingest.vector.upsert_chunks") as m_upsert:
+         patch("docstore.ingest.vector.upsert_chunks") as m_upsert, \
+         patch("docstore.ingest.graph_store.open_graph") as m_open_graph, \
+         patch("docstore.ingest.graph_store.add_document") as m_add_doc:
         from docstore.ingest import ingest
         summary = ingest(FIX / "sample_layout.pdf", instruction="pull all stats", cfg=cfg)
 
@@ -63,6 +65,8 @@ def test_ingest_pipeline_mocked(tmp_path: Path):
     m_verify.assert_called_once()
     m_embed.assert_called_once()
     m_upsert.assert_called_once()
+    # graph built by default (build_graph=True)
+    m_add_doc.assert_called_once()
 
     assert summary["pages_vision"] == 1
     assert summary["pages_textonly"] == 1
@@ -70,6 +74,7 @@ def test_ingest_pipeline_mocked(tmp_path: Path):
     assert summary["chunk_count"] >= 1
     assert summary["stat_count"] == 1
     assert summary["unverified_count"] == 0
+    assert summary["graph_built"] is True
     assert "doc_id" in summary
 
 
@@ -92,9 +97,77 @@ def test_force_vision_sends_all_pages(tmp_path: Path):
          patch("docstore.ingest.chunk_page", return_value=[chunk]), \
          patch("docstore.ingest.embed_texts", return_value=[[0.1, 0.2, 0.3]]), \
          patch("docstore.ingest.vector.open_store", return_value="TABLE"), \
-         patch("docstore.ingest.vector.upsert_chunks"):
+         patch("docstore.ingest.vector.upsert_chunks"), \
+         patch("docstore.ingest.graph_store.open_graph"), \
+         patch("docstore.ingest.graph_store.add_document"):
         from docstore.ingest import ingest
         summary = ingest(FIX / "sample_layout.pdf", instruction="x", cfg=cfg)
     assert m_vision.call_count == 3
     assert summary["pages_vision"] == 3
     assert summary["pages_skipped"] == 0
+
+
+def _text_only_pages():
+    return [Page(
+        page=1,
+        blocks=[Block(text="Acme Corp delivered the Oakdale project on schedule and within "
+                           "the approved budget for the quarter across every active site.",
+                      bbox=(0, 0, 500, 40), block_type="text")],
+        width=612, height=792,
+    )]
+
+
+def test_graph_flag_false_skips_graph(tmp_path: Path):
+    """graph=False excludes THIS document from the knowledge graph even though the
+    config default (build_graph) is True."""
+    cfg = Config(data_dir=str(tmp_path / "data"), graph_dir=str(tmp_path / "graph"))
+    chunk = Chunk(chunk_id="c1", doc_id="d", source_path="x", page=1, bbox=(0, 0, 1, 1),
+                  section="", char_start=0, char_end=5, text="Acme Corp")
+    with patch("docstore.ingest.extract_layout", return_value=_text_only_pages()), \
+         patch("docstore.ingest.chunk_page", return_value=[chunk]), \
+         patch("docstore.ingest.embed_texts", return_value=[[0.1, 0.2, 0.3]]), \
+         patch("docstore.ingest.vector.open_store", return_value="TABLE"), \
+         patch("docstore.ingest.vector.upsert_chunks"), \
+         patch("docstore.ingest.graph_store.add_document") as m_add_doc:
+        from docstore.ingest import ingest
+        summary = ingest(FIX / "sample_layout.pdf", instruction="x", cfg=cfg, graph=False)
+    m_add_doc.assert_not_called()
+    assert summary["graph_built"] is False
+    assert summary["entity_count"] == 0
+
+
+def test_graph_flag_true_overrides_config_off(tmp_path: Path):
+    """graph=True forces graph building even when cfg.build_graph is False."""
+    cfg = Config(data_dir=str(tmp_path / "data"), graph_dir=str(tmp_path / "graph"),
+                 build_graph=False)
+    chunk = Chunk(chunk_id="c1", doc_id="d", source_path="x", page=1, bbox=(0, 0, 1, 1),
+                  section="", char_start=0, char_end=9, text="Acme Corp")
+    with patch("docstore.ingest.extract_layout", return_value=_text_only_pages()), \
+         patch("docstore.ingest.chunk_page", return_value=[chunk]), \
+         patch("docstore.ingest.embed_texts", return_value=[[0.1, 0.2, 0.3]]), \
+         patch("docstore.ingest.vector.open_store", return_value="TABLE"), \
+         patch("docstore.ingest.vector.upsert_chunks"), \
+         patch("docstore.ingest.graph_store.open_graph"), \
+         patch("docstore.ingest.graph_store.add_document") as m_add_doc:
+        from docstore.ingest import ingest
+        summary = ingest(FIX / "sample_layout.pdf", instruction="x", cfg=cfg, graph=True)
+    m_add_doc.assert_called_once()
+    assert summary["graph_built"] is True
+
+
+def test_graph_default_off_via_config(tmp_path: Path):
+    """With no graph= arg, cfg.build_graph=False disables the graph."""
+    cfg = Config(data_dir=str(tmp_path / "data"), graph_dir=str(tmp_path / "graph"),
+                 build_graph=False)
+    chunk = Chunk(chunk_id="c1", doc_id="d", source_path="x", page=1, bbox=(0, 0, 1, 1),
+                  section="", char_start=0, char_end=9, text="Acme Corp")
+    with patch("docstore.ingest.extract_layout", return_value=_text_only_pages()), \
+         patch("docstore.ingest.chunk_page", return_value=[chunk]), \
+         patch("docstore.ingest.embed_texts", return_value=[[0.1, 0.2, 0.3]]), \
+         patch("docstore.ingest.vector.open_store", return_value="TABLE"), \
+         patch("docstore.ingest.vector.upsert_chunks"), \
+         patch("docstore.ingest.graph_store.add_document") as m_add_doc:
+        from docstore.ingest import ingest
+        summary = ingest(FIX / "sample_layout.pdf", instruction="x", cfg=cfg)
+    m_add_doc.assert_not_called()
+    assert summary["graph_built"] is False

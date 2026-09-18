@@ -14,6 +14,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 ExtractionBackend = Literal["claude", "ollama"]
+EntityBackend = Literal["regex", "ollama", "claude"]
 
 
 class Config(BaseModel):
@@ -39,10 +40,16 @@ class Config(BaseModel):
     data_dir: str = "data"
     table_name: str = "chunks"
     answer_path: str = "ANSWER.md"
+    graph_dir: str = "graph"
 
     # Behavior
     verify_stats: bool = True
     force_vision: bool = False
+
+    # Knowledge graph
+    build_graph: bool = True
+    entity_backend: EntityBackend = "regex"
+    entity_model: str = "llama3.1"  # used when entity_backend == "ollama"
 
     def anthropic_api_key(self) -> str:
         """Read the Anthropic key from the environment at call time.

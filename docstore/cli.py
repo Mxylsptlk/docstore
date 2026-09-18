@@ -34,16 +34,24 @@ def ingest(
     backend: Optional[str] = typer.Option(
         None, "--backend", "-b", help="Extraction backend: 'claude' (default) or 'ollama'."
     ),
+    graph: bool = typer.Option(
+        True, "--graph/--no-graph",
+        help="Include this document in the knowledge graph (default on). Use --no-graph to exclude it.",
+    ),
     config: Optional[str] = typer.Option(None, "--config", "-c", help="Path to config.yaml."),
 ):
     """Ingest a PDF into the local store."""
     cfg = _load_cfg(config)
-    summary = api_ingest(path, instruction=instruction, backend=backend, cfg=cfg)
+    summary = api_ingest(path, instruction=instruction, backend=backend, cfg=cfg, graph=graph)
     typer.echo(f"Ingested {summary['doc_id']}: {summary['page_count']} pages "
                f"({summary['pages_vision']} via vision, {summary['pages_textonly']} text-only, "
                f"{summary['pages_skipped']} skipped)")
     typer.echo(f"  chunks: {summary['chunk_count']}  stats: {summary['stat_count']}  "
                f"unverified: {summary['unverified_count']}")
+    if summary["graph_built"]:
+        typer.echo(f"  graph: {summary['entity_count']} entities linked")
+    else:
+        typer.echo("  graph: excluded (--no-graph)")
     if summary["unverified_count"]:
         typer.echo(f"  ⚠ {summary['unverified_count']} statistic(s) unverified — confirm against source.")
 

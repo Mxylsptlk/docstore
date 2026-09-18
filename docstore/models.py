@@ -19,6 +19,25 @@ BBox = tuple[float, float, float, float]
 
 BlockType = Literal["text", "image", "table"]
 
+# Entity categories the graph recognizes. Kept small and stable so nodes unify well.
+EntityType = Literal["ORG", "PERSON", "MONEY", "DATE", "PROJECT", "TERM", "MISC"]
+
+
+def normalize_entity_name(name: str) -> str:
+    """Canonical key for an entity node so variants unify onto one node:
+    'Acme Corp.' / 'acme corp' -> 'acme corp', and 'The Oakdale Corporation' /
+    'Oakdale Corporation' -> 'oakdale corporation'.
+
+    Lowercased, trimmed, internal whitespace collapsed, surrounding punctuation dropped,
+    and a leading article (the/a/an) removed so a captured 'The ' prefix does not split
+    an entity into two nodes."""
+    import re
+
+    n = re.sub(r"\s+", " ", name.strip().lower())
+    n = n.strip(" .,;:")
+    n = re.sub(r"^(?:the|a|an)\s+", "", n)
+    return n
+
 
 def make_chunk_id(doc_id: str, page: int, char_start: int, char_end: int) -> str:
     """Deterministic, stable chunk id (short hash). Stable across re-ingests so a
@@ -74,6 +93,30 @@ class Chunk(BaseModel):
     text: str
     is_stat: bool = False
     stat_verified: Optional[bool] = None
+
+
+class Entity(BaseModel):
+    """A named entity found in a chunk.
+
+    name  — surface form as it appeared in the text (for display)
+    key   — normalized canonical id; entity nodes unify on this
+    etype — coarse category
+    """
+
+    name: str
+    key: str
+    etype: EntityType = "MISC"
+
+
+class EntityMention(BaseModel):
+    """A provenance-carrying link between a chunk and an entity it mentions."""
+
+    chunk_id: str
+    doc_id: str
+    entity_key: str
+    entity_name: str
+    etype: EntityType = "MISC"
+    page: int = 0
 
 
 class RetrievalResult(BaseModel):
