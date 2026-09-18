@@ -222,3 +222,7 @@ __marimo__/
 
 # AI stuff
 .hermes/
+
+# docstore runtime artifacts
+data/
+ANSWER.md
