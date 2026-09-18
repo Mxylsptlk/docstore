@@ -40,7 +40,8 @@ def ingest(
     cfg = _load_cfg(config)
     summary = api_ingest(path, instruction=instruction, backend=backend, cfg=cfg)
     typer.echo(f"Ingested {summary['doc_id']}: {summary['page_count']} pages "
-               f"({summary['pages_vision']} via vision, {summary['pages_textonly']} text-only)")
+               f"({summary['pages_vision']} via vision, {summary['pages_textonly']} text-only, "
+               f"{summary['pages_skipped']} skipped)")
     typer.echo(f"  chunks: {summary['chunk_count']}  stats: {summary['stat_count']}  "
                f"unverified: {summary['unverified_count']}")
     if summary["unverified_count"]:

@@ -78,11 +78,3 @@ def _block_text(blk: dict) -> str:
         if span_text:
             parts.append(span_text)
     return "\n".join(parts)
-
-
-def page_needs_ocr(page: Page, *, min_words: int = 3) -> bool:
-    """Hook (not wired in MVP): True if a page has image blocks but almost no text,
-    suggesting a scanned page that would need OCR before/instead of vision."""
-    has_image = any(b.block_type == "image" for b in page.blocks)
-    word_count = sum(len(b.text.split()) for b in page.blocks if b.block_type != "image")
-    return has_image and word_count < min_words

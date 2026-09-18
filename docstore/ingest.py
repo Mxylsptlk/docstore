@@ -23,7 +23,7 @@ from docstore.chunk import chunk_page
 from docstore.config import Config
 from docstore.embed import embed_texts
 from docstore.extract import Page, extract_layout
-from docstore.gate import needs_vision
+from docstore.gate import needs_vision, page_should_skip
 from docstore.models import Block, Chunk, Stat
 from docstore.render import render_page
 from docstore.stores import vector
@@ -74,8 +74,15 @@ def ingest(
     all_stats: list[Stat] = []
     pages_vision = 0
     pages_textonly = 0
+    pages_skipped = 0
 
     for page in pages:
+        # Skip sparse decorative pages (cover, section divider) — but never a page that
+        # carries a statistic. force_vision keeps everything.
+        if not cfg.force_vision and page_should_skip(page):
+            pages_skipped += 1
+            continue
+
         if needs_vision(page, force_vision=cfg.force_vision):
             pages_vision += 1
             png = render_page(path, page.page, dpi=cfg.render_dpi)
@@ -118,6 +125,7 @@ def ingest(
         "page_count": len(pages),
         "pages_vision": pages_vision,
         "pages_textonly": pages_textonly,
+        "pages_skipped": pages_skipped,
         "chunk_count": len(all_chunks),
         "stat_count": len(all_stats),
         "unverified_count": unverified,

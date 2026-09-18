@@ -15,6 +15,7 @@ def test_cli_ingest_calls_api(tmp_path: Path):
     pdf.write_bytes(b"%PDF-1.4 fake")
     summary = {
         "doc_id": "f-1234", "page_count": 2, "pages_vision": 1, "pages_textonly": 1,
+        "pages_skipped": 0,
         "chunk_count": 3, "stat_count": 2, "unverified_count": 1,
     }
     with patch("docstore.cli.api_ingest", return_value=summary) as m:
@@ -39,8 +40,8 @@ def test_cli_ingest_passes_backend(tmp_path: Path):
     pdf = tmp_path / "f.pdf"
     pdf.write_bytes(b"%PDF-1.4 fake")
     with patch("docstore.cli.api_ingest", return_value={"doc_id": "x", "page_count": 1,
-               "pages_vision": 1, "pages_textonly": 0, "chunk_count": 1, "stat_count": 0,
-               "unverified_count": 0}) as m:
+               "pages_vision": 1, "pages_textonly": 0, "pages_skipped": 0, "chunk_count": 1,
+               "stat_count": 0, "unverified_count": 0}) as m:
         result = runner.invoke(app, ["ingest", str(pdf), "--backend", "ollama"])
     assert result.exit_code == 0, result.output
     _, kwargs = m.call_args

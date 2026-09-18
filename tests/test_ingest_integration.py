@@ -17,15 +17,23 @@ def _pages():
                            "across many sentences and clauses.", bbox=(0, 0, 500, 40), block_type="text")],
         width=612, height=792,
     )
-    image_page = Page(
+    # Image page carrying a real stat callout -> kept and routed to vision.
+    stat_page = Page(
         page=2,
         blocks=[
             Block(text="On-time rate", bbox=(0, 0, 100, 20), block_type="text"),
-            Block(text="", bbox=(0, 30, 200, 200), block_type="image"),
+            Block(text="42%", bbox=(0, 30, 60, 60), block_type="text"),
+            Block(text="", bbox=(0, 70, 200, 240), block_type="image"),
         ],
         width=612, height=792,
     )
-    return [text_page, image_page]
+    # Sparse decorative divider (no stats) -> should be skipped.
+    divider_page = Page(
+        page=3,
+        blocks=[Block(text="Section Two", bbox=(72, 60, 300, 90), block_type="text")],
+        width=612, height=792,
+    )
+    return [text_page, stat_page, divider_page]
 
 
 def test_ingest_pipeline_mocked(tmp_path: Path):
@@ -47,7 +55,7 @@ def test_ingest_pipeline_mocked(tmp_path: Path):
         from docstore.ingest import ingest
         summary = ingest(FIX / "sample_layout.pdf", instruction="pull all stats", cfg=cfg)
 
-    # gate consulted per page
+    # gate consulted per non-skipped page (pages 1 and 2; page 3 skipped before the gate)
     assert m_gate.call_count == 2
     # vision only on the gated-in page (page 2)
     assert m_vision.call_count == 1
@@ -58,6 +66,7 @@ def test_ingest_pipeline_mocked(tmp_path: Path):
 
     assert summary["pages_vision"] == 1
     assert summary["pages_textonly"] == 1
+    assert summary["pages_skipped"] == 1
     assert summary["chunk_count"] >= 1
     assert summary["stat_count"] == 1
     assert summary["unverified_count"] == 0
@@ -86,5 +95,6 @@ def test_force_vision_sends_all_pages(tmp_path: Path):
          patch("docstore.ingest.vector.upsert_chunks"):
         from docstore.ingest import ingest
         summary = ingest(FIX / "sample_layout.pdf", instruction="x", cfg=cfg)
-    assert m_vision.call_count == 2
-    assert summary["pages_vision"] == 2
+    assert m_vision.call_count == 3
+    assert summary["pages_vision"] == 3
+    assert summary["pages_skipped"] == 0

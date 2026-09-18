@@ -148,5 +148,19 @@ pytest -m live           # end-to-end; requires Ollama + ANTHROPIC_API_KEY
   entities (people, orgs, projects, amounts) as nodes and cross-document relationships as
   edges — for multi-hop questions and GraphRAG retrieval. Chunk IDs are already stable so
   the graph can attach without re-ingesting.
-- OCR fallback for scanned pages (hook exists in `extract.py`).
 - Dedicated table-parsing pass for dense numeric tables.
+
+### Page routing
+
+Every page is routed one of three ways during ingest (reported in the summary as
+`pages_textonly` / `pages_vision` / `pages_skipped`):
+
+- **Skip** — sparse decorative pages (cover, section divider) that carry no statistic are
+  dropped so they don't pollute retrieval. A page is skipped *only* when there is nothing
+  statistical to lose; any stat-like number keeps it.
+- **Vision** — pages whose numbers would scramble when flattened to a text stream: tables,
+  scattered stat callouts (e.g. `42%`, `$4.2M` in their own blocks), or number grids.
+- **Text layer** — clean prose, including numbers inside sentences (which read fine in
+  order), uses the free, accurate text layer.
+
+`force_vision: true` bypasses skip and routes every page through vision.
