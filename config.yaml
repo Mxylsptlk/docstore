@@ -7,7 +7,7 @@ embed_model: nomic-embed-text
 
 # Vision extraction backend: "claude" (default) or "ollama"
 extraction_backend: claude
-vision_model: claude-3-5-sonnet-latest
+vision_model: claude-sonnet-5
 
 # Page render resolution for vision extraction / stat verification
 render_dpi: 220

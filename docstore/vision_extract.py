@@ -46,7 +46,7 @@ def extract_from_image(
     instruction: str,
     *,
     backend: str = "claude",
-    model: str = "claude-3-5-sonnet-latest",
+    model: str = "claude-sonnet-5",
 ) -> tuple[str, list[Stat]]:
     if backend == "claude":
         raw = _extract_claude(png, instruction, model)
