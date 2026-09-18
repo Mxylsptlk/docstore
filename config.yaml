@@ -1,0 +1,26 @@
+# docstore configuration (non-secret settings only).
+# The Anthropic API key is read from the ANTHROPIC_API_KEY environment variable,
+# never from this file.
+
+# Local embedding model (served by Ollama)
+embed_model: nomic-embed-text
+
+# Vision extraction backend: "claude" (default) or "ollama"
+extraction_backend: claude
+vision_model: claude-3-5-sonnet-latest
+
+# Page render resolution for vision extraction / stat verification
+render_dpi: 220
+
+# Chunking
+chunk_size: 1200
+chunk_overlap: 150
+
+# Storage
+data_dir: data
+table_name: chunks
+answer_path: ANSWER.md
+
+# Behavior
+verify_stats: true      # re-read each extracted statistic from its cropped region
+force_vision: false     # true = send every page through vision (skip the gate)
