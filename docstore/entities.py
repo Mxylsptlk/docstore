@@ -125,9 +125,11 @@ def _extract_ollama(text: str, cfg: Config) -> list[Entity]:
 def _extract_claude(text: str, cfg: Config) -> list[Entity]:
     import anthropic
 
+    from docstore.anthropic_models import resolve_model
+
     client = anthropic.Anthropic(api_key=cfg.anthropic_api_key())
     msg = client.messages.create(
-        model=cfg.vision_model,
+        model=resolve_model(cfg.vision_model),
         max_tokens=1024,
         messages=[{"role": "user", "content": _LLM_PROMPT + text}],
     )

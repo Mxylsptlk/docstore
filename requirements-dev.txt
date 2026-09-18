@@ -1,0 +1,3 @@
+# Dev/test dependencies (installed via: pip install -e ".[dev]").
+# Runtime deps are the single source of truth in requirements.txt.
+pytest>=8

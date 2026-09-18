@@ -127,7 +127,7 @@ Non-secret settings live in `config.yaml` (see the file for all options):
 |----------------------|---------------------------|-----------------------------------------------|
 | `embed_model`        | `nomic-embed-text`        | Local Ollama embedding model                  |
 | `extraction_backend` | `claude`                  | `claude` (vision) or `ollama` (local vision)  |
-| `vision_model`       | `claude-sonnet-5`    | Vision model for extraction                   |
+| `vision_model`       | `latest`                  | Vision model; `latest` = newest Sonnet, or pin an id |
 | `render_dpi`         | `220`                     | Page render resolution for vision             |
 | `chunk_size`/`overlap`| `1200` / `150`           | Chunking parameters                           |
 | `verify_stats`       | `true`                    | Re-read each statistic to verify it           |

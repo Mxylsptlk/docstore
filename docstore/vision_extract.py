@@ -23,6 +23,7 @@ from typing import Optional
 import anthropic
 import ollama
 
+from docstore.anthropic_models import resolve_model
 from docstore.models import BBox, Stat
 
 SYSTEM_PROMPT = (
@@ -46,7 +47,7 @@ def extract_from_image(
     instruction: str,
     *,
     backend: str = "claude",
-    model: str = "claude-sonnet-5",
+    model: str = "latest",
 ) -> tuple[str, list[Stat]]:
     if backend == "claude":
         raw = _extract_claude(png, instruction, model)
@@ -76,7 +77,7 @@ def _extract_claude(png: bytes, instruction: str, model: str) -> str:
     client = anthropic.Anthropic(api_key=key)
     b64 = base64.standard_b64encode(png).decode()
     msg = client.messages.create(
-        model=model,
+        model=resolve_model(model),
         max_tokens=2048,
         system=SYSTEM_PROMPT,
         messages=[

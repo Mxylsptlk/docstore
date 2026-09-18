@@ -7,7 +7,10 @@ embed_model: nomic-embed-text
 
 # Vision extraction backend: "claude" (default) or "ollama"
 extraction_backend: claude
-vision_model: claude-sonnet-5
+# "latest" resolves to the newest Sonnet at call time (Anthropic has no -latest alias
+# for Sonnet). Or pin an explicit id, e.g. claude-sonnet-5 or a dated snapshot.
+# Use "latest:opus" / "latest:haiku" for other families.
+vision_model: latest
 
 # Page render resolution for vision extraction / stat verification
 render_dpi: 220

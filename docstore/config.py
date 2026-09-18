@@ -27,7 +27,7 @@ class Config(BaseModel):
 
     # Vision extraction backend
     extraction_backend: ExtractionBackend = "claude"
-    vision_model: str = "claude-sonnet-5"
+    vision_model: str = "latest"
 
     # Rendering
     render_dpi: int = Field(default=220, ge=72)

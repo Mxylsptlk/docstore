@@ -16,7 +16,7 @@ def sample_yaml(tmp_path: Path) -> Path:
             """
             embed_model: nomic-embed-text
             extraction_backend: claude
-            vision_model: claude-sonnet-5
+            vision_model: latest
             render_dpi: 220
             chunk_size: 1200
             chunk_overlap: 150
