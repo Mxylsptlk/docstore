@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Mac stuff
+.DS_Store
+
+# AI stuff
+.hermes/
