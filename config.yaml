@@ -5,12 +5,15 @@
 # Local embedding model (served by Ollama)
 embed_model: nomic-embed-text
 
-# Vision extraction backend: "claude" (default) or "ollama"
-extraction_backend: claude
-# "latest" resolves to the newest Sonnet at call time (Anthropic has no -latest alias
-# for Sonnet). Or pin an explicit id, e.g. claude-sonnet-5 or a dated snapshot.
-# Use "latest:opus" / "latest:haiku" for other families.
-vision_model: latest
+# Vision extraction backend: "ollama" (default, local & free) or "claude" (paid, higher accuracy)
+extraction_backend: ollama
+# Ollama vision model (used when extraction_backend is "ollama"). Pull it first:
+#   ollama pull qwen3-vl:2b
+vision_model_ollama: qwen3-vl:2b
+# Claude vision model (used when extraction_backend is "claude"). "latest" resolves to
+# the newest Sonnet at call time (Anthropic has no -latest alias for Sonnet). Or pin an
+# explicit id, e.g. claude-sonnet-5 or a dated snapshot. Use "latest:opus"/"latest:haiku".
+vision_model_claude: latest
 
 # Page render resolution for vision extraction / stat verification
 render_dpi: 220

@@ -47,7 +47,7 @@ def _reread_number(path: str | Path, page: int, bbox, cfg: Config) -> str:
         png,
         _REREAD_INSTRUCTION,
         backend=cfg.extraction_backend,
-        model=cfg.vision_model,
+        model=cfg.vision_model_for(),
     )
     return text.strip()
 

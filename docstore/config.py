@@ -25,9 +25,12 @@ class Config(BaseModel):
     # Embeddings (local, via Ollama)
     embed_model: str = "nomic-embed-text"
 
-    # Vision extraction backend
-    extraction_backend: ExtractionBackend = "claude"
-    vision_model: str = "latest"
+    # Vision extraction backend. Default is local Ollama (free); "claude" is the
+    # higher-accuracy paid option. Each backend has its own model field so switching
+    # backends picks the right model automatically.
+    extraction_backend: ExtractionBackend = "ollama"
+    vision_model_ollama: str = "qwen3-vl:2b"
+    vision_model_claude: str = "latest"  # sentinel -> newest Sonnet (see anthropic_models)
 
     # Rendering
     render_dpi: int = Field(default=220, ge=72)
@@ -50,6 +53,17 @@ class Config(BaseModel):
     build_graph: bool = True
     entity_backend: EntityBackend = "regex"
     entity_model: str = "llama3.1"  # used when entity_backend == "ollama"
+
+    def vision_model_for(self, backend: str | None = None) -> str:
+        """Return the vision model to use for the given backend (default: the configured
+        extraction_backend). Keeps the per-backend model choice in one place so callers
+        don't have to branch on the backend."""
+        backend = backend or self.extraction_backend
+        if backend == "ollama":
+            return self.vision_model_ollama
+        if backend == "claude":
+            return self.vision_model_claude
+        raise ValueError(f"Unknown extraction backend: {backend!r} (use 'claude' or 'ollama')")
 
     def anthropic_api_key(self) -> str:
         """Read the Anthropic key from the environment at call time.

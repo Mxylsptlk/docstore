@@ -32,7 +32,7 @@ def ingest(
         None, "--instruction", "-i", help="What to extract (e.g. 'pull all statistics and labels')."
     ),
     backend: Optional[str] = typer.Option(
-        None, "--backend", "-b", help="Extraction backend: 'claude' (default) or 'ollama'."
+        None, "--backend", "-b", help="Extraction backend: 'ollama' (default, local) or 'claude'."
     ),
     graph: bool = typer.Option(
         True, "--graph/--no-graph",

@@ -46,11 +46,14 @@ def test_claude_requires_env_key(monkeypatch):
 def test_vision_dispatch_ollama():
     fake_resp = {"message": {"content": json.dumps(RESP)}}
     with patch("docstore.vision_extract.ollama.chat", return_value=fake_resp) as chat:
-        text, stats = extract_from_image(PNG, "pull all stats", backend="ollama", model="llava")
+        text, stats = extract_from_image(PNG, "pull all stats", backend="ollama", model="qwen3-vl:2b")
     chat.assert_called_once()
-    # image passed through
     _, kwargs = chat.call_args
-    assert kwargs.get("images") or kwargs["messages"][0].get("images")
+    # image must ride INSIDE the user message (ollama.chat has no top-level images kwarg)
+    assert "images" not in kwargs
+    user_msg = kwargs["messages"][-1]
+    assert user_msg["images"], "image not attached to the user message"
+    assert kwargs["model"] == "qwen3-vl:2b"
     assert "42%" in text
     assert stats[0].label == "on-time completion rate"
 

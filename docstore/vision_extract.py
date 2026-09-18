@@ -26,6 +26,10 @@ import ollama
 from docstore.anthropic_models import resolve_model
 from docstore.models import BBox, Stat
 
+# Ollama context window for vision calls. A rendered page PNG is several thousand image
+# tokens; the model default (4096) overflows on a full page, so we request a larger window.
+_OLLAMA_NUM_CTX = 8192
+
 SYSTEM_PROMPT = (
     "You extract information from a single rendered page of a PDF. "
     "Follow the user's instruction about WHAT to extract. "
@@ -104,7 +108,9 @@ def _extract_ollama(png: bytes, instruction: str, model: str) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": _user_instruction(instruction), "images": [b64]},
         ],
-        images=[b64],
+        # A rendered page image is thousands of tokens; the default 4096-token context
+        # overflows. Give the model room so a full page fits (harmless for text-only crops).
+        options={"num_ctx": _OLLAMA_NUM_CTX},
     )
     return resp["message"]["content"]
 

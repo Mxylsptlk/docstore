@@ -15,8 +15,9 @@ def sample_yaml(tmp_path: Path) -> Path:
         textwrap.dedent(
             """
             embed_model: nomic-embed-text
-            extraction_backend: claude
-            vision_model: latest
+            extraction_backend: ollama
+            vision_model_ollama: qwen3-vl:2b
+            vision_model_claude: latest
             render_dpi: 220
             chunk_size: 1200
             chunk_overlap: 150
@@ -38,7 +39,9 @@ def sample_yaml(tmp_path: Path) -> Path:
 def test_config_loads_defaults(sample_yaml: Path):
     cfg = load_config(sample_yaml)
     assert cfg.embed_model == "nomic-embed-text"
-    assert cfg.extraction_backend == "claude"
+    assert cfg.extraction_backend == "ollama"
+    assert cfg.vision_model_ollama == "qwen3-vl:2b"
+    assert cfg.vision_model_claude == "latest"
     assert cfg.render_dpi >= 200
     assert cfg.chunk_size > 0
     assert cfg.data_dir  # set
@@ -63,9 +66,21 @@ def test_load_config_missing_file_raises(tmp_path: Path):
 def test_config_defaults_without_yaml():
     # A bare Config() should be usable with sane defaults.
     cfg = Config()
-    assert cfg.extraction_backend == "claude"
+    assert cfg.extraction_backend == "ollama"
+    assert cfg.vision_model_ollama == "qwen3-vl:2b"
     assert cfg.verify_stats is True
     assert cfg.force_vision is False
+
+
+def test_vision_model_for_selects_by_backend():
+    cfg = Config(vision_model_ollama="qwen3-vl:2b", vision_model_claude="latest")
+    # default follows extraction_backend
+    assert cfg.vision_model_for() == "qwen3-vl:2b"  # backend defaults to ollama
+    # explicit backend override
+    assert cfg.vision_model_for("claude") == "latest"
+    assert cfg.vision_model_for("ollama") == "qwen3-vl:2b"
+    cfg_claude = Config(extraction_backend="claude")
+    assert cfg_claude.vision_model_for() == "latest"
 
 
 def test_extraction_backend_validated():

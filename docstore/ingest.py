@@ -93,7 +93,7 @@ def ingest(
             pages_vision += 1
             png = render_page(path, page.page, dpi=cfg.render_dpi)
             curated, stats = extract_from_image(
-                png, instruction, backend=cfg.extraction_backend, model=cfg.vision_model
+                png, instruction, backend=cfg.extraction_backend, model=cfg.vision_model_for()
             )
             # stamp the real page number onto each stat
             for s in stats:
